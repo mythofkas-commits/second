@@ -1,0 +1,15 @@
+{
+  "name": "second",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "install:web": "pnpm install --dir rollout-radar",
+    "dev": "pnpm --dir rollout-radar dev",
+    "build": "pnpm --dir rollout-radar build",
+    "start": "pnpm --dir rollout-radar start",
+    "lint": "pnpm --dir rollout-radar lint",
+    "test": "pnpm --dir rollout-radar test",
+    "test:e2e": "pnpm --dir rollout-radar test:e2e"
+  }
+}
