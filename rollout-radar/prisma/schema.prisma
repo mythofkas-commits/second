@@ -1,0 +1,199 @@
+// Prisma schema for Rollout Radar
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+  DESKTOP
+  MULTI
+}
+
+enum AvailabilityStatus {
+  LIVE
+  STAGED
+  NOT_LIVE
+  UNKNOWN
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FeatureStatus {
+  ACTIVE
+  DEPRECATED
+}
+
+model User {
+  id        String       @id @default(uuid())
+  email     String       @unique
+  name      String?
+  image     String?
+  role      Role         @default(USER)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  reports   UserReport[]
+  follows   Follow[]
+}
+
+model App {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  platform  Platform?
+  website   String?
+  developer String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  features  Feature[]
+
+  @@index([slug])
+}
+
+model Feature {
+  id           String       @id @default(uuid())
+  appId        String
+  app          App          @relation(fields: [appId], references: [id])
+  name         String
+  slug         String       @unique
+  summary      String?
+  description  String?
+  status       FeatureStatus @default(ACTIVE)
+  introducedAt DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  requirements   Requirement[]
+  availabilities Availability[]
+  instructions   Instruction?
+  sources        Source[]
+  changes        ChangeLog[]
+  reports        UserReport[]
+  followers      Follow[]
+
+  @@index([appId])
+  @@index([slug])
+}
+
+model Requirement {
+  id            String   @id @default(uuid())
+  featureId     String
+  feature       Feature  @relation(fields: [featureId], references: [id])
+  osName        String
+  osMin         String?
+  appVersionMin String?
+  accountFlag   String?
+  notes         String?
+}
+
+model Availability {
+  id        String            @id @default(uuid())
+  featureId String
+  feature   Feature           @relation(fields: [featureId], references: [id])
+  country   String
+  status    AvailabilityStatus @default(UNKNOWN)
+  lastSeen  DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  sources   AvailabilitySource[]
+
+  @@unique([featureId, country])
+  @@index([country])
+}
+
+model Source {
+  id          String   @id @default(uuid())
+  featureId   String
+  feature     Feature  @relation(fields: [featureId], references: [id])
+  url         String
+  title       String?
+  sourceType  String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  availabilities AvailabilitySource[]
+
+  @@index([featureId])
+}
+
+model AvailabilitySource {
+  id             String       @id @default(uuid())
+  availabilityId String
+  availability   Availability @relation(fields: [availabilityId], references: [id])
+  sourceId       String
+  source         Source       @relation(fields: [sourceId], references: [id])
+
+  @@unique([availabilityId, sourceId])
+}
+
+model Instruction {
+  id            String   @id @default(uuid())
+  featureId     String   @unique
+  feature       Feature  @relation(fields: [featureId], references: [id])
+  stepsMarkdown String
+  settingsPath  String?
+  videoUrl      String?
+}
+
+model ChangeLog {
+  id        String  @id @default(uuid())
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id])
+  entryDate DateTime @default(now())
+  text      String
+}
+
+model UserReport {
+  id         String       @id @default(uuid())
+  featureId  String
+  feature    Feature      @relation(fields: [featureId], references: [id])
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id])
+  country    String
+  device     String
+  os         String
+  appVersion String?
+  hasFeature Boolean
+  status     ReportStatus @default(PENDING)
+  ipHash     String?
+  createdAt  DateTime     @default(now())
+
+  @@index([featureId])
+  @@index([country])
+}
+
+model Follow {
+  id        String  @id @default(uuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id])
+  country   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, featureId, country])
+}
+
+model Suggestion {
+  id          String   @id @default(uuid())
+  featureId   String
+  feature     Feature  @relation(fields: [featureId], references: [id])
+  description String
+  createdAt   DateTime @default(now())
+  processed   Boolean  @default(false)
+}
